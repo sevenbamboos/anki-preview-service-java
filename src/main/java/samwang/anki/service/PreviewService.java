@@ -10,12 +10,14 @@ import com.samwang.anki.impl.model.TokenCard;
 import com.samwang.anki.impl.model.token.MetaInfoType;
 import samwang.anki.model.CardDTO;
 import samwang.anki.model.CardGroupDTO;
+import samwang.anki.model.OutputDTO;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -77,14 +79,46 @@ public class PreviewService {
         AnkiFileLogger fileLogger = loadPropLogger();
         try {
             List<CardGroup> groups = _getGroups(uploadedFileName, fileLogger, question, false).collect(Collectors.toList());
-            AnkiFileWriter writer = new AnkiFileWriter(rootDir.toPath(), groups, true);
-            writer.doWrite(collector);
+            outputGroups(groups, collector);
         } catch (Exception e) {
             System.err.println(e.getMessage());
             throw new IOException(e);
         } finally {
             fileLogger.close();
         }
+    }
+
+    public void outputGroups(OutputDTO outputCommand, OutputLogCollector collector) throws IOException {
+        AnkiFileLogger fileLogger = loadPropLogger();
+
+        Function<String, Stream<CardGroup>> getGroupsOrError = file -> {
+            try {
+                return _getGroups(file, fileLogger, outputCommand.getQuestion(), false);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        };
+
+        try {
+            Stream<CardGroup> groupStreams = outputCommand.getFiles().stream()
+                .map(f -> getGroupsOrError.apply(f))
+                .reduce((accu, item) -> Stream.of(accu, item).flatMap(f -> f))
+                .orElse(Stream.empty());
+            List<CardGroup> groups = groupStreams
+                .collect(Collectors.toList());
+            outputGroups(groups, collector);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println(e.getMessage());
+            throw new IOException(e);
+        } finally {
+            fileLogger.close();
+        }
+    }
+
+    private void outputGroups(List<CardGroup> groups, OutputLogCollector collector) throws IOException {
+        AnkiFileWriter writer = new AnkiFileWriter(rootDir.toPath(), groups, true);
+        writer.doWrite(collector);
     }
 
     private Stream<CardGroup> _getGroups(String uploadedFileName, AnkiFileLogger fileLogger, String question, boolean forPreview) throws IOException {

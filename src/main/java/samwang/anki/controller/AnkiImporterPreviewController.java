@@ -1,15 +1,13 @@
 package samwang.anki.controller;
 
 import com.samwang.anki.impl.model.OutputLogCollector;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import samwang.anki.controller.exception.FileExistingException;
 import samwang.anki.controller.exception.UploadFailedException;
 import samwang.anki.model.CardDTO;
 import samwang.anki.model.CardGroupDTO;
+import samwang.anki.model.OutputDTO;
 import samwang.anki.model.OutputLogCollectorDTO;
 import samwang.anki.service.PreviewService;
 
@@ -72,6 +70,19 @@ public class AnkiImporterPreviewController {
         OutputLogCollector collector = new OutputLogCollector();
         try {
             previewService.outputGroups(fileName, collector, question);
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
+        } finally {
+            return new OutputLogCollectorDTO(collector);
+        }
+    }
+
+    @PostMapping("/outputs")
+    public OutputLogCollectorDTO outputs(@RequestBody OutputDTO outputCommand) {
+
+        OutputLogCollector collector = new OutputLogCollector();
+        try {
+            previewService.outputGroups(outputCommand, collector);
         } catch (IOException e) {
             System.err.println(e.getMessage());
         } finally {
