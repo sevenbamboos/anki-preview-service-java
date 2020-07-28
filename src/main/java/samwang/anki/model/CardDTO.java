@@ -37,11 +37,19 @@ public class CardDTO {
     }
 
     public String getCloze() {
-        return source.getRawClozeValue();
+        try {
+            return source.getRawClozeValue();
+        } catch (Exception e) {
+            return e.getMessage();
+        }
     }
 
     public String getBasic() {
-        return source.getRawBasicValue();
+        try {
+            return source.getRawBasicValue();
+        } catch (Exception e) {
+            return e.getMessage();
+        }
     }
 
     public String getSource() {
